@@ -1,7 +1,33 @@
-import asyncio
 from typing import Optional
 from openai import AsyncOpenAI
 from config import settings
+
+
+ASSISTANT_ID = None
+
+
+async def initialize_assistant(client: AsyncOpenAI, model: str = "gpt-4o") -> str:
+    """
+    Инициализирует ассистента, если он еще не создан.
+    
+    Параметры:
+    - client (AsyncOpenAI): Клиент OpenAI API.
+    - model (str, optional): Название модели (по умолчанию "gpt-4o").
+    
+    Возвращает:
+    - str: ID созданного ассистента.
+    """
+    global ASSISTANT_ID
+
+    if ASSISTANT_ID is None:
+        assistant = await client.beta.assistants.create(
+            name="Persistent Assistant",
+            instructions="Отвечай на вопросы кратко и по существу.",
+            model=model
+        )
+        ASSISTANT_ID = assistant.id
+
+    return ASSISTANT_ID
 
 
 async def get_single_response(question: str, model: str = "gpt-4o") -> Optional[str]:
@@ -21,12 +47,7 @@ async def get_single_response(question: str, model: str = "gpt-4o") -> Optional[
 
     client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
-    # Создаем временного ассистента
-    assistant = await client.beta.assistants.create(
-        name="One-time Assistant",
-        instructions="Отвечай на вопросы кратко и по существу.",
-        model=model
-    )
+    assistant_id = await initialize_assistant(client, model)
 
     # Создаем новый поток для этого вопроса
     thread = await client.beta.threads.create()
@@ -39,19 +60,10 @@ async def get_single_response(question: str, model: str = "gpt-4o") -> Optional[
             content=question
         )
 
-        # Запускаем обработку запроса
-        run = await client.beta.threads.runs.create(
+        await client.beta.threads.runs.create_and_poll(
             thread_id=thread.id,
-            assistant_id=assistant.id
+            assistant_id=assistant_id
         )
-
-        while True:
-            run_status = await client.beta.threads.runs.retrieve(
-                thread_id=thread.id, run_id=run.id
-            )
-            if run_status.status == "completed":
-                break
-            await asyncio.sleep(0.5)  # Ожидание между проверками
 
         messages = await client.beta.threads.messages.list(thread_id=thread.id)
         answer: Optional[str] = None
@@ -64,6 +76,4 @@ async def get_single_response(question: str, model: str = "gpt-4o") -> Optional[
         return answer
 
     finally:
-        # Удаляем созданные ресурсы
-        await client.beta.assistants.delete(assistant_id=assistant.id)
         await client.beta.threads.delete(thread_id=thread.id)
