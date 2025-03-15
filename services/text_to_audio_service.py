@@ -1,6 +1,7 @@
 from io import BytesIO
 from typing import Optional
 import aiohttp
+from openai import AsyncOpenAI
 
 
 async def text_to_audio(
@@ -24,27 +25,26 @@ async def text_to_audio(
     - None: В случае ошибки.
     """
 
-    url = "https://api.openai.com/v1/audio/speech"
+    try:
+        # Инициализация клиента OpenAI с API ключом
+        client = AsyncOpenAI(api_key=api_key)
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
+        # Выполнение запроса на преобразование текста в речь
+        response = await client.audio.speech.create(
+            model=model,
+            voice=voice,
+            input=text
+        )
 
-    payload = {
-        "model": model,
-        "input": text,
-        "voice": voice
-    }
+        # Получение аудиоданных из ответа
+        audio_bytes = response.content
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, json=payload) as response:
-            if response.status == 200:
-                audio_bytes: bytes = await response.read()
-                audio_file = BytesIO(audio_bytes)
-                audio_file.name = "output.mp3"
-                return audio_file
-            else:
-                print(f"Ошибка: {response.status}")
-                print(await response.text())
-                return None
+        # Создание BytesIO объекта для хранения аудиоданных
+        audio_file = BytesIO(audio_bytes)
+        audio_file.name = "output.mp3"
+
+        return audio_file
+
+    except Exception as e:
+        print(f"Ошибка при преобразовании текста в речь: {e}")
+        return None
