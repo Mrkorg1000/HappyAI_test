@@ -1,10 +1,7 @@
 from io import BytesIO
 from typing import Optional
-from openai import AsyncOpenAI
+from services.assistant_client_service import client
 from config import settings
-
-
-client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 
 async def audio_to_text(audio_file: BytesIO) -> Optional[str]:

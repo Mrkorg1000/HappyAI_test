@@ -3,6 +3,7 @@ from openai import AsyncOpenAI
 from config import settings
 
 
+client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 ASSISTANT_ID = None
 
 
@@ -44,8 +45,6 @@ async def get_single_response(question: str, model: str = "gpt-4o") -> Optional[
     Исключения:
     - Может выбросить исключение, если API OpenAI не отвечает или произошла ошибка.
     """
-
-    client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
     assistant_id = await initialize_assistant(client, model)
 
