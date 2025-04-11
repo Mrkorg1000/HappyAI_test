@@ -1,7 +1,7 @@
 from io import BytesIO
 from typing import Optional
 import aiohttp
-from openai import AsyncOpenAI
+from services.assistant_client_service import client
 
 
 async def text_to_audio(
@@ -26,9 +26,6 @@ async def text_to_audio(
     """
 
     try:
-        # Инициализация клиента OpenAI с API ключом
-        client = AsyncOpenAI(api_key=api_key)
-
         # Выполнение запроса на преобразование текста в речь
         response = await client.audio.speech.create(
             model=model,
