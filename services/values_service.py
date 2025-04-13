@@ -1,13 +1,6 @@
-from io import BytesIO
 import json
-from typing import Dict, List, Optional, Tuple
-import openai
-from aiogram import F, types
-from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from config import settings
-from form import Form
 from pg_db.database import async_session_maker
 from pg_db.models import User, Value
     
