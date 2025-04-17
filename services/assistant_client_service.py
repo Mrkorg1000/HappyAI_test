@@ -1,6 +1,9 @@
+import json
+import os
 from typing import Optional
 from openai import AsyncOpenAI
 from config import settings
+from aiogram.fsm.context import FSMContext
 
 
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
@@ -26,35 +29,28 @@ async def initialize_assistant(client: AsyncOpenAI, model: str = "gpt-4o") -> st
         assistant = await client.beta.assistants.create(
             name="Persistent Assistant",
             instructions="Отвечай на вопросы кратко и по существу.",
-            model=model
+            model=model,
+            tools=[{"type": "file_search"}]  # Добавление инструмента поиска по файлам
         )
         ASSISTANT_ID = assistant.id
-
+        
+    else:
+        # Обновление существующего ассистента для добавления file_search
+        assistant = await client.beta.assistants.update(
+            assistant_id=ASSISTANT_ID,
+            tools=[{"type": "file_search"}]  # Добавление инструмента поиска по файлам
+        )
     return ASSISTANT_ID
 
 
-async def get_single_response(question: str, model: str = "gpt-4o") -> Optional[str]:
+async def get_single_response(question: str, model: str = "gpt-4o") -> tuple[Optional[str], Optional[str]]:
     """
-    Отправляет вопрос в OpenAI GPT-4o и получает ответ.
-
-    Параметры:
-    - question (str): Вопрос, который будет отправлен модели.
-    - model (str, optional): Название модели (по умолчанию "gpt-4o").
-
-    Возвращает:
-    - Optional[str]: Ответ модели, если запрос успешен, иначе None.
-
-    Исключения:
-    - Может выбросить исключение, если API OpenAI не отвечает или произошла ошибка.
+    Отправляет вопрос в OpenAI GPT-4o и получает ответ, возвращая также thread_id.
     """
-
     assistant_id = await initialize_assistant(client, model)
-
-    # Создаем новый поток для этого вопроса
     thread = await client.beta.threads.create()
 
     try:
-        # Добавляем сообщение от пользователя
         await client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
@@ -74,7 +70,10 @@ async def get_single_response(question: str, model: str = "gpt-4o") -> Optional[
                 answer = message.content[0].text.value
                 break
 
-        return answer
+        return answer, thread.id
+
+    except Exception:
+        return None, thread.id
 
     finally:
         await client.beta.threads.delete(thread_id=thread.id)

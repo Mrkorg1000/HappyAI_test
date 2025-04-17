@@ -100,7 +100,7 @@ async def process_voice_question(message: types.Message, state: FSMContext) -> N
         return
 
     # Получаем ответ от ассистента
-    response_text: Optional[str] = await get_single_response(question_text)
+    response_text, thread_id = await get_single_response(question_text)
 
     if response_text is None:
         await async_amplitude_track(
@@ -109,6 +109,10 @@ async def process_voice_question(message: types.Message, state: FSMContext) -> N
             )
         await message.answer("Ошибка при получении ответа от ассистента.")
         return
+    
+    
+    await state.update_data(thread_id=thread_id)
+
 
     # Преобразуем текст ответа в аудио
     audio_response: Optional[BytesIO] = await text_to_audio(response_text, api_key=settings.OPENAI_API_KEY)

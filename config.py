@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
     
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_PASSWORD: str
+    REDIS_DB: int
+    
     AMPLITUDE_API_KEY: str
 
     model_config = SettingsConfigDict(
