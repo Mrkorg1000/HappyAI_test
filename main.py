@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional
 import redis.asyncio as redis
 from aiogram.fsm.storage.redis import RedisStorage
 from concurrent.futures import ThreadPoolExecutor
@@ -9,9 +10,18 @@ from openai import AsyncOpenAI
 from config import settings
 from amplitude_dep import amplitude_executor
 from handlers.user_handlers import user_router
+from services.assistant_client_service import initialize_assistant
+from services.assistant_client_state import client
 
 
 async def main() -> None:
+    await initialize_assistant(
+        client,
+        settings.OPENAI_API_KEY,
+        model="gpt-4o",
+        anxiety_file_path="anxiety.docx" 
+    )
+    
     redis_connection = redis.Redis(
         host=settings.REDIS_HOST,
         port=settings.REDIS_PORT,
